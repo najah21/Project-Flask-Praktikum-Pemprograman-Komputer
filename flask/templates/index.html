@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Manajemen Penjualan</title>
+    <style>
+        /* Style dasar untuk seluruh halaman */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: hsl(225, 100%, 82%);
+        }
+
+        /* Judul halaman */
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        /* Kontainer utama */
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Layout form dalam 2 kolom */
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* Style input */
+        form input {
+            padding: 8px;
+            font-size: 1em;
+        }
+
+        /* Tombol simpan */
+        form button {
+            grid-column: span 2;
+            padding: 10px;
+            background-color: #d21010;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        /* Hover tombol */
+        form button:hover {
+            background-color: #218838;
+        }
+
+        /* Tabel penjualan */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        /* Tombol edit dan hapus */
+        .actions button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .update-btn {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Penjualan Barang Elektronik</h1>
+
+        <!-- Form input data penjualan -->
+        <form id="penjualanForm">
+            <input type="text" id="nama_pembeli" placeholder="Nama Pembeli" required>
+            <input type="text" id="nama_barang" placeholder="Nama Barang" required>
+            <input type="date" id="tanggal_jual" required>
+            <input type="number" id="jumlah_barang" placeholder="Jumlah Barang" required>
+            <button type="submit">Simpan</button>
+        </form>
+
+        <!-- Tabel untuk menampilkan data penjualan -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Nama Pembeli</th>
+                    <th>Nama Barang</th>
+                    <th>Tanggal Jual</th>
+                    <th>Jumlah</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="penjualanBody">
+                <!-- Data akan dimuat secara dinamis -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = '/penjualan'; // Endpoint backend
+        let editId = null; // Untuk menyimpan ID yang sedang diedit
+
+        // Load data saat halaman pertama kali dimuat
+        document.addEventListener('DOMContentLoaded', loadData);
+
+        // Menangani submit form
+        document.getElementById('penjualanForm').addEventListener('submit', submitForm);
+
+        // Fungsi untuk mengambil data penjualan dari backend
+        function loadData() {
+            fetch(API_URL)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('penjualanBody');
+                    tbody.innerHTML = ''; // Kosongkan tabel dulu
+
+                    // Tambahkan setiap data ke dalam tabel
+                    data.forEach(p => {
+                        const row = `
+                            <tr data-id="${p.id}">
+                                <td>${p.nama_pembeli}</td>
+                                <td>${p.nama_barang}</td>
+                                <td>${p.tanggal_jual}</td>
+                                <td>${p.jumlah_barang}</td>
+                                <td class="actions">
+                                    <button class="update-btn" onclick="editData(${p.id})">Edit</button>
+                                    <button class="delete-btn" onclick="deleteData(${p.id})">Hapus</button>
+                                </td>
+                            </tr>`;
+                        tbody.innerHTML += row;
+                    });
+                });
+        }
+
+        // Fungsi untuk menangani pengiriman form
+        function submitForm(e) {
+            e.preventDefault(); // Mencegah reload halaman
+
+            // Ambil data dari form
+            const data = {
+                nama_pembeli: document.getElementById('nama_pembeli').value,
+                nama_barang: document.getElementById('nama_barang').value,
+                tanggal_jual: document.getElementById('tanggal_jual').value,
+                jumlah_barang: parseInt(document.getElementById('jumlah_barang').value)
+            };
+
+            // Tentukan apakah ini tambah data (POST) atau edit data (PUT)
+            const method = editId ? 'PUT' : 'POST';
+            const url = editId ? `${API_URL}/${editId}` : API_URL;
+
+            // Kirim data ke server
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(() => {
+                document.getElementById('penjualanForm').reset(); // Reset form
+                editId = null; // Hapus mode edit
+                loadData(); // Muat ulang data
+            });
+        }
+
+        // Fungsi untuk mengisi form saat user mengedit data
+        function editData(id) {
+            fetch(`${API_URL}/${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('nama_pembeli').value = data.nama_pembeli;
+                    document.getElementById('nama_barang').value = data.nama_barang;
+                    document.getElementById('tanggal_jual').value = data.tanggal_jual;
+                    document.getElementById('jumlah_barang').value = data.jumlah_barang;
+                    editId = id; // Tandai ID yang sedang diedit
+                });
+        }
+
+        // Fungsi untuk menghapus data
+        function deleteData(id) {
+            if (confirm('Yakin ingin menghapus data ini?')) {
+                fetch(`${API_URL}/${id}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(() => loadData()); // Muat ulang data setelah dihapus
+            }
+        }
+    </script>
+</body>
+</html>
